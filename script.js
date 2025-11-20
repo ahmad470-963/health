@@ -4,7 +4,8 @@
 const { jsx } = require("react/jsx-runtime");
 
 // Je vindt deze URL in de Azure Portal op de Overview pagina van je Function App.
-const apiUrl = "https://health-api-fn-123-bsauahaahvatgvb5.westeurope-01.azurewebsites.net/api/http_trigger?code=3F_NMIkEACv5P4VXj5dajCRBf9MUd0kajVjxZC7IScFEAzFuwRAd5A=="; 
+const apiUrl = "https://health-api-fn-123-bsauahaahvatgvb5.westeurope-01.azurewebsites.net/api/http_trigger"; 
+
 
 async function stuurData() {
     // 1. Data verzamelen en valideren
