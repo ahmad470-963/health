@@ -1,0 +1,90 @@
+/* Definitieve Basis Instellingen */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 40px auto; /* Dit zorgt voor horizontale centrering van de inhoud */
+    max-width: 850px; /* Stelt een nette, leesbare maximale breedte in */
+    background-color: #eef2f5; /* Lichte achtergrond */
+    color: #333;
+}
+
+/* Hoofdingen */
+h1 {
+    color: #0078d4; /* Azure Blauw */
+    text-align: center; /* Centraal geplaatst */
+    border-bottom: 3px solid #0078d4;
+    padding-bottom: 15px;
+    margin-bottom: 30px;
+}
+
+h2 {
+    color: #333;
+    text-align: center;
+    margin-top: 25px;
+}
+
+/* Formulier Container en Algemene Vormgeving */
+#healthForm, #advies-output, body > button {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1); /* Zachte schaduw */
+    margin: 20px auto; /* Centraal plaatsen en ruimte erboven/onder */
+    max-width: 500px; /* Maximale breedte voor het formulier */
+}
+
+/* Input velden */
+input[type="number"] {
+    width: 100%;
+    padding: 12px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+
+input[type="number"]:focus {
+    border-color: #0078d4; /* Blauwe rand bij focus */
+    outline: none;
+}
+
+/* Knoppen Styling */
+button {
+    color: white;
+    padding: 12px 20px;
+    margin-top: 15px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+    display: block; /* Zorgt dat knoppen de breedte innemen */
+    width: 100%;
+}
+
+/* Verstuur Knop (hoofdactie) */
+button[type="button"] {
+    background-color: #28a745; /* Groen */
+    width: 100%; /* Maak de knop even breed als het formulier */
+}
+
+button[type="button"]:hover {
+    background-color: #1e7e34;
+}
+
+/* Dashboard Knop */
+body > button {
+    background-color: #6c757d; /* Grijs */
+    width: 100%; /* Maak de knop even breed als het formulier */
+}
+body > button:hover {
+    background-color: #5a6268;
+}
+
+/* Resultaatvenster */
+#advies-output {
+    background-color: #f0f8ff; /* Zeer lichtblauw */
+    border: 1px solid #cceeff;
+    text-align: center;
+    font-size: 1.1em;
+    font-weight: 500;
+}

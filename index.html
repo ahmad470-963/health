@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Gezondheidsadvies Tool</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container"></div>
+    <h1>Mijn Persoonlijke Gezondheidscheck</h1>
+    
+    <form id="healthForm">
+        <h2 >Voer je gegevens in:</h2>
+        
+        <label for="hartslag">Hartslag in rust (slagen/min):</label>
+        <input type="number" id="hartslag" required><br><br>
+        
+        <label for="slaapuren">Slaapuren per nacht:</label>
+        <input type="number" id="slaapuren" step="0.1" required><br><br>
+        
+        <label for="stappen">Stappen per dag:</label>
+        <input type="number" id="stappen" required><br><br>
+        
+        <button type="button" onclick="stuurData()">Verstuur en krijg Advies</button>
+    </form>
+
+    <hr>
+
+    <h2>Persoonlijk Advies:</h2>
+    <div id="advies-output">
+        <p>— Druk op 'Verstuur' om je analyse te starten. —</p>
+    </div>
+    
+    <button onclick="document.location='JOUW_POWER_BI_URL'">Bekijk Dashboard</button>
+    
+    <script src="script.js"></script>
+</body>
+</html>
