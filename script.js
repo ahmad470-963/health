@@ -4,7 +4,7 @@
 const { jsx } = require("react/jsx-runtime");
 
 // Je vindt deze URL in de Azure Portal op de Overview pagina van je Function App.
-const apiUrl = "https://health-api-fn-123-bsauahaahvatgvb5.westeurope-01.azurewebsites.net/api/http_trigger"; 
+const apiUrl = "/api/http_trigger";
 
 
 async function stuurData() {
