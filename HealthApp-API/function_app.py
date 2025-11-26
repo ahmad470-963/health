@@ -9,14 +9,13 @@ def http_trigger(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
 
     try:
-        req_body = req.get_json() # Haal de JSON data op van de frontend
+        req_body = req.get_json()
     except ValueError:
         return func.HttpResponse(
             "Please pass a JSON body with 'HeartRate', 'SleepHours', and 'StepsPerDay' in the request body",
             status_code=400
         )
 
-    # Haal de data uit de ontvangen JSON
     heart_rate = req_body.get('HeartRate')
     sleep_hours = req_body.get('SleepHours')
     steps_per_day = req_body.get('StepsPerDay')
@@ -27,26 +26,44 @@ def http_trigger(req: func.HttpRequest) -> func.HttpResponse:
             status_code=400
         )
 
-    # Hier komt jouw logica voor het genereren van advies
-    # Dit is slechts een VOORBEELD; pas dit aan met jouw ECHTE ADVIESLOGICA en eventuele DATABASE-INTERACTIE
-    advice_message = "Geen specifiek advies beschikbaar." # Standaard bericht
+    # --- Hier begint de logica voor MEERDERE adviezen ---
+    advices = [] # Lijst om alle adviezen in op te slaan
 
+    # Advies voor Hartslag
     if heart_rate < 60:
-        advice_message = "Je hartslag is laag, mogelijk ben je een atleet of zeer ontspannen. Raadpleeg een arts bij klachten."
+        advices.append("Hartslag: Je hartslag is laag. Raadpleeg een arts bij klachten.")
     elif heart_rate > 100:
-        advice_message = "Je hartslag is hoog, probeer te ontspannen en raadpleeg een arts bij aanhoudende klachten."
-    elif sleep_hours < 6:
-        advice_message = "Je slaapt te weinig. Probeer meer rust te pakken voor een betere gezondheid."
-    elif steps_per_day < 5000:
-        advice_message = "Je beweegt te weinig. Probeer meer stappen te zetten per dag."
-    elif heart_rate >= 60 and heart_rate <= 100 and sleep_hours >= 7 and steps_per_day >= 8000:
-        advice_message = "Uitstekende gezondheidswaarden! Blijf zo doorgaan!"
+        advices.append("Hartslag: Je hartslag is hoog. Probeer te ontspannen en raadpleeg een arts bij aanhoudende klachten.")
+    elif heart_rate >= 60 and heart_rate <= 100:
+        advices.append("Hartslag: Je hartslag in rust is gezond.")
     else:
-        advice_message = "Je waarden zijn prima, maar er is ruimte voor verbetering. Blijf actief en eet gezond!"
+        advices.append("Hartslag: Geen specifiek advies beschikbaar voor hartslag.")
 
-    # Stuur het daadwerkelijke advies terug
+
+    # Advies voor Slaapuren
+    if sleep_hours < 7:
+        advices.append("Slaap: Je slaapt te weinig. Streef naar minimaal 7-9 uur per nacht.")
+    elif sleep_hours > 9:
+        advices.append("Slaap: Te veel slaap kan ook nadelig zijn. Controleer je energielevel overdag.")
+    else:
+        advices.append("Slaap: Je slaapuren per nacht zijn gezond.")
+
+
+    # Advies voor Stappen
+    if steps_per_day < 5000:
+        advices.append("Beweging: Je beweegt te weinig. Probeer meer stappen te zetten, streef naar minimaal 8000 stappen per dag.")
+    elif steps_per_day >= 5000 and steps_per_day < 8000:
+        advices.append("Beweging: Goed bezig met je stappen. Streef naar meer dan 8000 stappen voor optimale gezondheid.")
+    else:
+        advices.append("Beweging: Je stappentelling per dag is uitstekend! Blijf zo doorgaan.")
+
+
+    # Combineer alle adviezen tot één string, gescheiden door bijvoorbeeld nieuwe regels
+    final_advice = "\n".join(advices)
+    # --- Einde logica voor MEERDERE adviezen ---
+
     return func.HttpResponse(
-        json.dumps({"advice": advice_message}),
+        json.dumps({"advice": final_advice}), # Stuur de gecombineerde advies-string terug
         status_code=200,
         mimetype="application/json"
     )
