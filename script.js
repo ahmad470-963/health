@@ -1,10 +1,18 @@
-// STAP 1: VUL DE URL VAN JOUW AZURE FUNCTION APP IN!
-// Dit is de URL van jouw API die de data ontvangt. 
-
-const { jsx } = require("react/jsx-runtime");
-
-// Je vindt deze URL in de Azure Portal op de Overview pagina van je Function App.
+// STAP 1: DEFINIEER DE URL VAN JOUW AZURE FUNCTION APP
+// Dit is de URL van jouw API die de data ontvangt.
+// Voor Azure Static Web Apps is dit een relatief pad via de ingebouwde proxy.
 const apiUrl = "/api/http_trigger";
+
+// Wacht tot de hele DOM (HTML-structuur) is geladen voordat je JavaScript uitvoert
+document.addEventListener('DOMContentLoaded', () => {
+    // Koppel de event listener aan de knop na het laden van de DOM
+    const verzendKnop = document.getElementById('verzend-knop');
+    if (verzendKnop) {
+        verzendKnop.addEventListener('click', stuurData);
+    } else {
+        console.error("Fout: Knop met ID 'verzend-knop' niet gevonden in de HTML.");
+    }
+});
 
 
 async function stuurData() {
@@ -14,8 +22,7 @@ async function stuurData() {
     const stappen = document.getElementById('stappen').value;
     const adviesOutput = document.getElementById('advies-output');
 
-
- if (!hartslag || !slaapuren || !stappen) {
+    if (!hartslag || !slaapuren || !stappen) {
         adviesOutput.innerHTML = '<p style="color: red;">Vul alle velden in!</p>';
         return;
     }
