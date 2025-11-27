@@ -1,100 +1,69 @@
 import azure.functions as func
 import logging
 import json
-import os
-import pyodbc
-import base64
 
 app = func.FunctionApp()
 
 @app.route(route="http_trigger", auth_level=func.AuthLevel.FUNCTION)
 def http_trigger(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info('Python HTTP trigger: Verwerken gezondheidsdata met database opslag.')
+    logging.info('Python HTTP trigger function processed a request.')
 
-    # 1. DATABASE VERBINDING OPHALEN
-    db_connection_string = os.environ.get("AzureSqlDbConnection")
-    
-    # 2. IDENTITEIT OPHALEN (Wie is ingelogd?)
-    user_id = None
-    user_name = "Onbekend"
-    
-    header = req.headers.get('x-ms-client-principal')
-    if header:
-        try:
-            decoded = base64.b64decode(header).decode('utf-8')
-            user_json = json.loads(decoded)
-            user_id = user_json.get('userId')
-            user_name = user_json.get('userDetails')
-            logging.info(f"Gebruiker herkend: {user_name} (ID: {user_id})")
-        except Exception as e:
-            logging.error(f"Fout bij lezen gebruiker: {e}")
-    else:
-        logging.warning("Geen ingelogde gebruiker gevonden (Anoniem verzoek).")
-
-    # 3. DATA UIT HET FORMULIER LEZEN
     try:
         req_body = req.get_json()
-        heart_rate = req_body.get('HeartRate')
-        sleep_hours = req_body.get('SleepHours')
-        steps_per_day = req_body.get('StepsPerDay')
-
-        if not all([heart_rate, sleep_hours, steps_per_day]):
-            return func.HttpResponse(json.dumps({"error": "Vul alle velden in."}), status_code=400)
-
-        # 4. ADVIES GENEREREN (Jouw logica voor meerdere adviezen)
-        advices = []
-        
-        if heart_rate < 60: advices.append("Hartslag: Je hartslag is laag. Raadpleeg een arts bij klachten.")
-        elif heart_rate > 100: advices.append("Hartslag: Je hartslag is hoog. Probeer te ontspannen.")
-        else: advices.append("Hartslag: Je hartslag in rust is gezond.")
-
-        if sleep_hours < 7: advices.append("Slaap: Je slaapt te weinig. Streef naar minimaal 7-9 uur.")
-        elif sleep_hours > 9: advices.append("Slaap: Te veel slaap kan ook nadelig zijn.")
-        else: advices.append("Slaap: Je slaapuren per nacht zijn gezond.")
-
-        if steps_per_day < 5000: advices.append("Beweging: Je beweegt te weinig. Probeer meer te wandelen.")
-        elif steps_per_day >= 5000 and steps_per_day < 8000: advices.append("Beweging: Goed bezig, maar streef naar 8000 stappen.")
-        else: advices.append("Beweging: Je stappentelling is uitstekend!")
-
-        final_advice = "\n".join(advices)
-
-        # 5. OPSLAAN IN DATABASE
-        if db_connection_string:
-            try:
-                conn = pyodbc.connect(db_connection_string)
-                cursor = conn.cursor()
-
-                # STAP A: Als we een UserID hebben, sla de gebruiker eerst op in de Users tabel
-                if user_id:
-                    check_user = "SELECT UserID FROM Users WHERE UserID = ?"
-                    cursor.execute(check_user, user_id)
-                    if not cursor.fetchone():
-                        insert_user = "INSERT INTO Users (UserID, Username) VALUES (?, ?)"
-                        cursor.execute(insert_user, user_id, user_name)
-                        conn.commit()
-                        logging.info(f"Nieuwe gebruiker toegevoegd: {user_name}")
-
-                # STAP B: Sla de meting op in HealthMetrics
-                insert_metric = """
-                    INSERT INTO HealthMetrics 
-                    (HeartRate, SleepHours, StepsPerDay, AdviceText, UserID) 
-                    VALUES (?, ?, ?, ?, ?)
-                """
-                cursor.execute(insert_metric, heart_rate, sleep_hours, steps_per_day, final_advice, user_id)
-                conn.commit()
-                logging.info("Data succesvol opgeslagen in HealthMetrics.")
-
-            except Exception as e:
-                # DIT IS BELANGRIJK: We loggen de specifieke databasefout
-                logging.error(f"CRITISCHE DATABASE FOUT: {str(e)}")
-                # We gaan door zodat de gebruiker wel zijn advies ziet, ook als DB faalt
-
-        # 6. ANTWOORD NAAR WEBSITE (Staat nu buiten het database-blok!)
+    except ValueError:
         return func.HttpResponse(
-            json.dumps({"advice": final_advice}),
-            status_code=200,
-            mimetype="application/json"
+            "Please pass a JSON body with 'HeartRate', 'SleepHours', and 'StepsPerDay' in the request body",
+            status_code=400
         )
 
-    except Exception as e:
-        return func.HttpResponse(json.dumps({"error": str(e)}), status_code=500)
+    heart_rate = req_body.get('HeartRate')
+    sleep_hours = req_body.get('SleepHours')
+    steps_per_day = req_body.get('StepsPerDay')
+
+    if heart_rate is None or sleep_hours is None or steps_per_day is None:
+        return func.HttpResponse(
+            "Please pass 'HeartRate', 'SleepHours', and 'StepsPerDay' in the request body",
+            status_code=400
+        )
+
+    # --- Hier begint de logica voor MEERDERE adviezen ---
+    advices = [] # Lijst om alle adviezen in op te slaan
+
+    # Advies voor Hartslag
+    if heart_rate < 60:
+        advices.append("Hartslag: Je hartslag is laag. Raadpleeg een arts bij klachten.")
+    elif heart_rate > 100:
+        advices.append("Hartslag: Je hartslag is hoog. Probeer te ontspannen en raadpleeg een arts bij aanhoudende klachten.")
+    elif heart_rate >= 60 and heart_rate <= 100:
+        advices.append("Hartslag: Je hartslag in rust is gezond.")
+    else:
+        advices.append("Hartslag: Geen specifiek advies beschikbaar voor hartslag.")
+
+
+    # Advies voor Slaapuren
+    if sleep_hours < 7:
+        advices.append("Slaap: Je slaapt te weinig. Streef naar minimaal 7-9 uur per nacht.")
+    elif sleep_hours > 9:
+        advices.append("Slaap: Te veel slaap kan ook nadelig zijn. Controleer je energielevel overdag.")
+    else:
+        advices.append("Slaap: Je slaapuren per nacht zijn gezond.")
+
+
+    # Advies voor Stappen
+    if steps_per_day < 5000:
+        advices.append("Beweging: Je beweegt te weinig. Probeer meer stappen te zetten, streef naar minimaal 8000 stappen per dag.")
+    elif steps_per_day >= 5000 and steps_per_day < 8000:
+        advices.append("Beweging: Goed bezig met je stappen. Streef naar meer dan 8000 stappen voor optimale gezondheid.")
+    else:
+        advices.append("Beweging: Je stappentelling per dag is uitstekend! Blijf zo doorgaan.")
+
+
+    # Combineer alle adviezen tot één string, gescheiden door bijvoorbeeld nieuwe regels
+    final_advice = "\n".join(advices)
+    # --- Einde logica voor MEERDERE adviezen ---
+
+    return func.HttpResponse(
+        json.dumps({"advice": final_advice}), # Stuur de gecombineerde advies-string terug
+        status_code=200,
+        mimetype="application/json"
+    )
