@@ -9,23 +9,21 @@ app = func.FunctionApp()
 
 @app.route(route="http_trigger", auth_level=func.AuthLevel.FUNCTION)
 def http_trigger(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info('Python HTTP trigger: Verwerken gezondheidsdata met user-login.')
+    logging.info('Python HTTP trigger: Verwerken gezondheidsdata met database opslag.')
 
-    # 1. Haal de database verbinding op
+    # 1. DATABASE VERBINDING OPHALEN
+    # Zorg dat 'AzureSqlDbConnection' in je Azure Function App instellingen staat!
     db_connection_string = os.environ.get("AzureSqlDbConnection")
     
     # 2. IDENTITEIT OPHALEN (Wie is ingelogd?)
-    # Azure SWA stopt de user info in een header genaamd 'x-ms-client-principal'
     user_id = None
     user_name = "Onbekend"
     
     header = req.headers.get('x-ms-client-principal')
     if header:
         try:
-            # De header is gecodeerd (base64), we moeten hem decoderen
             decoded = base64.b64decode(header).decode('utf-8')
             user_json = json.loads(decoded)
-            
             user_id = user_json.get('userId')
             user_name = user_json.get('userDetails')
             logging.info(f"Gebruiker herkend: {user_name} (ID: {user_id})")
@@ -44,21 +42,27 @@ def http_trigger(req: func.HttpRequest) -> func.HttpResponse:
         if not all([heart_rate, sleep_hours, steps_per_day]):
             return func.HttpResponse(json.dumps({"error": "Vul alle velden in."}), status_code=400)
 
-        # 4. ADVIES GENEREREN (Jouw logica)
+        # 4. ADVIES GENEREREN (Jouw logica voor meerdere adviezen)
         advices = []
-        if sleep_hours < 7: advices.append("Slaap: Probeer minimaal 7-8 uur te slapen.")
-        else: advices.append("Slaap: Goed bezig met je nachtrust!")
         
-        if steps_per_day < 5000: advices.append("Beweging: Probeer wat meer te wandelen.")
-        else: advices.append("Beweging: Lekker bezig met bewegen!")
-        
-        if heart_rate > 100: advices.append("Hartslag: Je rusthartslag is wat hoog.")
-        elif heart_rate < 60: advices.append("Hartslag: Lage rusthartslag (sportief!).")
-        else: advices.append("Hartslag: Prima hartslag.")
+        # Hartslag
+        if heart_rate < 60: advices.append("Hartslag: Je hartslag is laag. Raadpleeg een arts bij klachten.")
+        elif heart_rate > 100: advices.append("Hartslag: Je hartslag is hoog. Probeer te ontspannen.")
+        else: advices.append("Hartslag: Je hartslag in rust is gezond.")
+
+        # Slaap
+        if sleep_hours < 7: advices.append("Slaap: Je slaapt te weinig. Streef naar minimaal 7-9 uur.")
+        elif sleep_hours > 9: advices.append("Slaap: Te veel slaap kan ook nadelig zijn.")
+        else: advices.append("Slaap: Je slaapuren per nacht zijn gezond.")
+
+        # Stappen
+        if steps_per_day < 5000: advices.append("Beweging: Je beweegt te weinig. Probeer meer te wandelen.")
+        elif steps_per_day >= 5000 and steps_per_day < 8000: advices.append("Beweging: Goed bezig, maar streef naar 8000 stappen.")
+        else: advices.append("Beweging: Je stappentelling is uitstekend!")
 
         final_advice = "\n".join(advices)
 
-        # 5. OPSLAAN IN DATABASE
+        # 5. OPSLAAN IN DATABASE (DIT ONTBRAK!)
         if db_connection_string:
             try:
                 conn = pyodbc.connect(db_connection_string)
@@ -66,18 +70,15 @@ def http_trigger(req: func.HttpRequest) -> func.HttpResponse:
 
                 # STAP A: Als we een UserID hebben, sla de gebruiker eerst op in de Users tabel
                 if user_id:
-                    # Check of gebruiker al bestaat
-                    check_sql = "SELECT UserID FROM Users WHERE UserID = ?"
-                    cursor.execute(check_sql, user_id)
+                    check_user = "SELECT UserID FROM Users WHERE UserID = ?"
+                    cursor.execute(check_user, user_id)
                     if not cursor.fetchone():
-                        # Bestaat niet? Voeg toe!
                         insert_user = "INSERT INTO Users (UserID, Username) VALUES (?, ?)"
                         cursor.execute(insert_user, user_id, user_name)
-                        logging.info(f"Nieuwe gebruiker toegevoegd: {user_name}")
                         conn.commit()
+                        logging.info(f"Nieuwe gebruiker toegevoegd: {user_name}")
 
-                # STAP B: Sla de meting op (inclusief UserID!)
-                # Let op: Als user_id None is (niet ingelogd), wordt NULL opgeslagen in de database
+                # STAP B: Sla de meting op in HealthMetrics
                 insert_metric = """
                     INSERT INTO HealthMetrics 
                     (HeartRate, SleepHours, StepsPerDay, AdviceText, UserID) 
@@ -85,13 +86,14 @@ def http_trigger(req: func.HttpRequest) -> func.HttpResponse:
                 """
                 cursor.execute(insert_metric, heart_rate, sleep_hours, steps_per_day, final_advice, user_id)
                 conn.commit()
-                
-                logging.info("Data succesvol opgeslagen.")
+                logging.info("Data succesvol opgeslagen in HealthMetrics.")
 
             except Exception as e:
                 logging.error(f"Database fout: {e}")
-                return func.HttpResponse(json.dumps({"error": "Database fout, probeer later opnieuw."}), status_code=500)
+                # We sturen nog steeds het advies terug, zelfs als opslaan faalt, 
+                # maar in de logs zie je dan de fout.
 
+        # 6. ANTWOORD NAAR WEBSITE
         return func.HttpResponse(
             json.dumps({"advice": final_advice}),
             status_code=200,
