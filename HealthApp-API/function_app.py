@@ -12,7 +12,6 @@ def http_trigger(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger: Verwerken gezondheidsdata met database opslag.')
 
     # 1. DATABASE VERBINDING OPHALEN
-    # Zorg dat 'AzureSqlDbConnection' in je Azure Function App instellingen staat!
     db_connection_string = os.environ.get("AzureSqlDbConnection")
     
     # 2. IDENTITEIT OPHALEN (Wie is ingelogd?)
@@ -45,24 +44,21 @@ def http_trigger(req: func.HttpRequest) -> func.HttpResponse:
         # 4. ADVIES GENEREREN (Jouw logica voor meerdere adviezen)
         advices = []
         
-        # Hartslag
         if heart_rate < 60: advices.append("Hartslag: Je hartslag is laag. Raadpleeg een arts bij klachten.")
         elif heart_rate > 100: advices.append("Hartslag: Je hartslag is hoog. Probeer te ontspannen.")
         else: advices.append("Hartslag: Je hartslag in rust is gezond.")
 
-        # Slaap
         if sleep_hours < 7: advices.append("Slaap: Je slaapt te weinig. Streef naar minimaal 7-9 uur.")
         elif sleep_hours > 9: advices.append("Slaap: Te veel slaap kan ook nadelig zijn.")
         else: advices.append("Slaap: Je slaapuren per nacht zijn gezond.")
 
-        # Stappen
         if steps_per_day < 5000: advices.append("Beweging: Je beweegt te weinig. Probeer meer te wandelen.")
         elif steps_per_day >= 5000 and steps_per_day < 8000: advices.append("Beweging: Goed bezig, maar streef naar 8000 stappen.")
         else: advices.append("Beweging: Je stappentelling is uitstekend!")
 
         final_advice = "\n".join(advices)
 
-        # 5. OPSLAAN IN DATABASE (DIT ONTBRAK!)
+        # 5. OPSLAAN IN DATABASE
         if db_connection_string:
             try:
                 conn = pyodbc.connect(db_connection_string)
@@ -89,16 +85,11 @@ def http_trigger(req: func.HttpRequest) -> func.HttpResponse:
                 logging.info("Data succesvol opgeslagen in HealthMetrics.")
 
             except Exception as e:
-                logging.error(f"Database fout: {e}")
-                # We sturen nog steeds het advies terug, zelfs als opslaan faalt, 
-                # maar in de logs zie je dan de fout.
                 # DIT IS BELANGRIJK: We loggen de specifieke databasefout
                 logging.error(f"CRITISCHE DATABASE FOUT: {str(e)}")
-                # Optioneel: stuur de fout ook terug naar de frontend om het te zien
-                # return func.HttpResponse(json.dumps({"error": f"DB Fout: {str(e)}"}), status_code=500)
+                # We gaan door zodat de gebruiker wel zijn advies ziet, ook als DB faalt
 
-
-        # 6. ANTWOORD NAAR WEBSITE
+        # 6. ANTWOORD NAAR WEBSITE (Staat nu buiten het database-blok!)
         return func.HttpResponse(
             json.dumps({"advice": final_advice}),
             status_code=200,
