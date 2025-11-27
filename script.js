@@ -56,3 +56,35 @@ async function stuurData() {
         adviesOutput.innerHTML = `<p style="color: red;">Er is een fout opgetreden: ${error.message}. Controleer de console voor details.</p>`;
     }
 }
+// --- NIEUWE CODE VOOR INLOGGEN ---
+
+async function checkLoginStatus() {
+    try {
+        // Vraag aan Azure: "Wie is er ingelogd?"
+        const response = await fetch('/.auth/me');
+        const payload = await response.json();
+        const user = payload.clientPrincipal; // Hier zit de info in
+
+        const authSectie = document.getElementById('auth-sectie');
+
+        if (user) {
+            // SITUATIE: IEMAND IS INGELOGD
+            console.log("Ingelogd als:", user.userDetails);
+            
+            // Verander de knop naar "Hallo [Naam]" en een uitlogknop
+            authSectie.innerHTML = `
+                <span style="margin-right: 15px; font-weight: bold;">Hallo, ${user.userDetails}</span>
+                <a href="/.auth/logout" style="text-decoration: none; color: red;">Uitloggen</a>
+            `;
+        } else {
+            // SITUATIE: NIEMAND IS INGELOGD
+            console.log("Niet ingelogd.");
+            // De standaard "Inloggen" knop staat er al in HTML, dus we hoeven niks te doen
+        }
+    } catch (error) {
+        console.error("Kon login status niet controleren:", error);
+    }
+}
+
+// Voer deze check direct uit zodra de pagina laadt
+document.addEventListener('DOMContentLoaded', checkLoginStatus);
