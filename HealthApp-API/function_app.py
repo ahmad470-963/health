@@ -92,6 +92,11 @@ def http_trigger(req: func.HttpRequest) -> func.HttpResponse:
                 logging.error(f"Database fout: {e}")
                 # We sturen nog steeds het advies terug, zelfs als opslaan faalt, 
                 # maar in de logs zie je dan de fout.
+                # DIT IS BELANGRIJK: We loggen de specifieke databasefout
+                logging.error(f"CRITISCHE DATABASE FOUT: {str(e)}")
+                # Optioneel: stuur de fout ook terug naar de frontend om het te zien
+                # return func.HttpResponse(json.dumps({"error": f"DB Fout: {str(e)}"}), status_code=500)
+
 
         # 6. ANTWOORD NAAR WEBSITE
         return func.HttpResponse(
