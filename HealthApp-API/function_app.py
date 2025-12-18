@@ -6,64 +6,64 @@ app = func.FunctionApp()
 
 @app.route(route="http_trigger", auth_level=func.AuthLevel.FUNCTION)
 def http_trigger(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info('Python HTTP trigger function processed a request.')
+    logging.info('Python HTTP trigger: Advies genereren zonder database.')
 
     try:
+        # 1. DATA UIT HET FORMULIER LEZEN
         req_body = req.get_json()
-    except ValueError:
+        heart_rate = req_body.get('HeartRate')
+        sleep_hours = req_body.get('SleepHours')
+        steps_per_day = req_body.get('StepsPerDay')
+
+        # Controleer of alle velden zijn ingevuld
+        if heart_rate is None or sleep_hours is None or steps_per_day is None:
+            return func.HttpResponse(
+                json.dumps({"error": "Vul alle velden in."}), 
+                status_code=400,
+                mimetype="application/json"
+            )
+
+        # 2. ADVIES GENEREREN (Logica)
+        advices = []
+        
+        # Hartslag logica
+        if heart_rate < 60: 
+            advices.append("Hartslag: Je hartslag is aan de lage kant. Rustig aan.")
+        elif heart_rate > 100: 
+            advices.append("Hartslag: Je hartslag is hoog. Probeer wat ontspanningsoefeningen.")
+        else: 
+            advices.append("Hartslag: Je hartslag is in rust uitstekend.")
+
+        # Slaap logica
+        if sleep_hours < 7: 
+            advices.append("Slaap: Je hebt minder dan 7 uur geslapen. Probeer vanavond vroeger naar bed te gaan.")
+        elif sleep_hours > 9: 
+            advices.append("Slaap: Je hebt veel geslapen. Let op dat je overdag wel actief blijft.")
+        else: 
+            advices.append("Slaap: Je hebt een gezonde hoeveelheid geslapen.")
+
+        # Stappen logica
+        if steps_per_day < 5000: 
+            advices.append("Beweging: Je hebt weinig bewogen vandaag. Maak eens een korte wandeling.")
+        elif steps_per_day < 10000: 
+            advices.append("Beweging: Goed bezig! Je bent bijna bij de aanbevolen 10.000 stappen.")
+        else: 
+            advices.append("Beweging: Top! Je hebt je bewegingsdoelen ruimschoots gehaald.")
+
+        # Voeg alle adviezen samen tot één tekst
+        final_advice = "\n".join(advices)
+
+        # 3. ANTWOORD TERUGSTUREN
         return func.HttpResponse(
-            "Please pass a JSON body with 'HeartRate', 'SleepHours', and 'StepsPerDay' in the request body",
-            status_code=400
+            json.dumps({"advice": final_advice}),
+            status_code=200,
+            mimetype="application/json"
         )
 
-    heart_rate = req_body.get('HeartRate')
-    sleep_hours = req_body.get('SleepHours')
-    steps_per_day = req_body.get('StepsPerDay')
-
-    if heart_rate is None or sleep_hours is None or steps_per_day is None:
+    except Exception as e:
+        logging.error(f"Fout opgetreden: {str(e)}")
         return func.HttpResponse(
-            "Please pass 'HeartRate', 'SleepHours', and 'StepsPerDay' in the request body",
-            status_code=400
+            json.dumps({"error": "Er is iets misgegaan bij het verwerken van je gegevens."}),
+            status_code=500,
+            mimetype="application/json"
         )
-
-    # --- Hier begint de logica voor MEERDERE adviezen ---
-    advices = [] # Lijst om alle adviezen in op te slaan
-
-    # Advies voor Hartslag
-    if heart_rate < 60:
-        advices.append("Hartslag: Je hartslag is laag. Raadpleeg een arts bij klachten.")
-    elif heart_rate > 100:
-        advices.append("Hartslag: Je hartslag is hoog. Probeer te ontspannen en raadpleeg een arts bij aanhoudende klachten.")
-    elif heart_rate >= 60 and heart_rate <= 100:
-        advices.append("Hartslag: Je hartslag in rust is gezond.")
-    else:
-        advices.append("Hartslag: Geen specifiek advies beschikbaar voor hartslag.")
-
-
-    # Advies voor Slaapuren
-    if sleep_hours < 7:
-        advices.append("Slaap: Je slaapt te weinig. Streef naar minimaal 7-9 uur per nacht.")
-    elif sleep_hours > 9:
-        advices.append("Slaap: Te veel slaap kan ook nadelig zijn. Controleer je energielevel overdag.")
-    else:
-        advices.append("Slaap: Je slaapuren per nacht zijn gezond.")
-
-
-    # Advies voor Stappen
-    if steps_per_day < 5000:
-        advices.append("Beweging: Je beweegt te weinig. Probeer meer stappen te zetten, streef naar minimaal 8000 stappen per dag.")
-    elif steps_per_day >= 5000 and steps_per_day < 8000:
-        advices.append("Beweging: Goed bezig met je stappen. Streef naar meer dan 8000 stappen voor optimale gezondheid.")
-    else:
-        advices.append("Beweging: Je stappentelling per dag is uitstekend! Blijf zo doorgaan.")
-
-
-    # Combineer alle adviezen tot één string, gescheiden door bijvoorbeeld nieuwe regels
-    final_advice = "\n".join(advices)
-    # --- Einde logica voor MEERDERE adviezen ---
-
-    return func.HttpResponse(
-        json.dumps({"advice": final_advice}), # Stuur de gecombineerde advies-string terug
-        status_code=200,
-        mimetype="application/json"
-    )
